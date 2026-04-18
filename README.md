@@ -155,6 +155,17 @@ Declared permissions (`android/app/src/main/AndroidManifest.xml`):
 
 `SCHEDULE_EXACT_ALARM` in Android 14+ requires a runtime opt-in. The app requests it automatically on startup via `flutter_local_notifications`' `requestExactAlarmsPermission()` and, if denied, falls back to `AndroidScheduleMode.inexactAllowWhileIdle` (reminders may drift by a few minutes). The PWA is notified of the state through `exactAlarmsGranted` in `window.__vigiliate_native_state`.
 
+## Crash reporting
+
+Crashlytics is wired in `lib/main.dart`:
+
+- Framework errors → `FirebaseCrashlytics.instance.recordFlutterFatalError`
+- Async / out-of-tree errors → `PlatformDispatcher.instance.onError`
+- Zone-level escapes → `runZonedGuarded`
+- Collection is **disabled in debug** (`kDebugMode`) so local runs don't pollute the dashboard
+
+Reports show up at <https://console.firebase.google.com/project/_/crashlytics>. The first crash after a release can take a few minutes to appear.
+
 ## Planning Game tracking
 
 This project is tracked in the Planning Game (`Vigiliate` project), under epic `VGI-PCS-0007 — App móvil nativa (Flutter wrapper)`.
