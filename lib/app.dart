@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'bridge.dart';
 import 'google_auth.dart';
@@ -88,8 +89,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (await _controller.canGoBack()) {
-          _controller.goBack();
+          await _controller.goBack();
+          return;
         }
+        // On the landing page there is nowhere to go back to inside the
+        // WebView — honour the system gesture and close the app instead
+        // of silently swallowing the event (which is what the scaffold did).
+        await SystemNavigator.pop();
       },
       child: Scaffold(
         backgroundColor: const Color(0xFF171417),
