@@ -41,7 +41,13 @@ class NotificationService {
       final minute = int.tryParse(parts[1]) ?? 0;
 
       var scheduled = tz.TZDateTime(
-          location, now.year, now.month, now.day, hour, minute);
+        location,
+        now.year,
+        now.month,
+        now.day,
+        hour,
+        minute,
+      );
       if (scheduled.isBefore(now)) {
         scheduled = scheduled.add(const Duration(days: 1));
       }

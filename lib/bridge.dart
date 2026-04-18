@@ -36,8 +36,8 @@ class BridgeMessage {
     final slots = data['slots'];
     if (slots is! List) return const [];
     return slots
-        .whereType<Map>()
-        .map((s) => Map<String, dynamic>.from(s))
+        .whereType<Map<Object?, Object?>>()
+        .map(Map<String, dynamic>.from)
         .toList(growable: false);
   }
 }
