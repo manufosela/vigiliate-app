@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
+import 'bridge.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin =
@@ -70,20 +71,17 @@ class NotificationService {
   }
 
   static Future<void> handleMessage(String message) async {
-    try {
-      final data = jsonDecode(message) as Map<String, dynamic>;
-      final type = data['type'] as String?;
+    final msg = BridgeMessage.tryParse(message);
+    if (msg == null) return;
+    await handleBridgeMessage(msg);
+  }
 
-      if (type == 'schedule-alarms') {
-        final slots = (data['slots'] as List<dynamic>)
-            .map((s) => Map<String, dynamic>.from(s as Map))
-            .toList();
-        await scheduleAlarms(slots);
-      } else if (type == 'cancel-alarms') {
+  static Future<void> handleBridgeMessage(BridgeMessage msg) async {
+    switch (msg.type) {
+      case BridgeMessageType.scheduleAlarms:
+        await scheduleAlarms(msg.extractSlots());
+      case BridgeMessageType.cancelAlarms:
         await _plugin.cancelAll();
-      }
-    } catch (_) {
-      // Ignore malformed messages
     }
   }
 }
