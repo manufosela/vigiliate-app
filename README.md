@@ -116,8 +116,13 @@ flutter build appbundle --release
 ### APKs split per ABI (smaller downloads for direct install)
 ```bash
 flutter build apk --release --split-per-abi
-# → build/app/outputs/flutter-apk/app-{armeabi-v7a,arm64-v8a,x86_64}-release.apk
+# → build/app/outputs/flutter-apk/
+#     app-armeabi-v7a-release.apk  (~13 MB, older 32-bit devices)
+#     app-arm64-v8a-release.apk    (~16 MB, modern ARM 64 phones — the common case)
+#     app-x86_64-release.apk       (~17 MB, emulators / Chromebooks)
 ```
+
+The fat universal APK (`flutter build apk --release` without `--split-per-abi`) is ~43 MB. Use splits whenever you distribute outside Google Play. Inside Play you don't need this — the App Bundle (`appbundle` target) already performs the split on Google's side so each user downloads only their ABI.
 
 ### Debug APK
 ```bash
