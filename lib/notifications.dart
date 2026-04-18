@@ -31,10 +31,19 @@ class NotificationService {
   /// Null means "not yet asked" (pre-Android 13 or init not run).
   static bool? _notificationsGranted;
 
+  /// Whether the user has granted SCHEDULE_EXACT_ALARM. On Android 14+ this
+  /// is a runtime permission that must be requested explicitly; otherwise
+  /// alarms fall back to inexact scheduling and may drift by several minutes.
+  static bool? _exactAlarmsGranted;
+
   /// Last known result of the runtime notification permission prompt. The
   /// PWA reads this through the bridge so it can show an in-app banner when
   /// the user has denied notifications and reminders would silently fail.
   static bool? get notificationsGranted => _notificationsGranted;
+
+  /// Last known state of the SCHEDULE_EXACT_ALARM permission. The PWA uses
+  /// this to warn the user that reminders may not fire at the exact time.
+  static bool? get exactAlarmsGranted => _exactAlarmsGranted;
 
   static Future<void> init() async {
     tz.initializeTimeZones();
@@ -58,6 +67,30 @@ class NotificationService {
     // On older releases this returns true without prompting.
     _notificationsGranted =
         await android?.requestNotificationsPermission() ?? true;
+
+    // Android 14+ (API 34): SCHEDULE_EXACT_ALARM is now a user-toggleable
+    // permission. Check the current state and, if denied, open the system
+    // dialog so the user can grant it without having to navigate settings
+    // manually. On older Android versions the capability is implicit and
+    // canScheduleExactNotifications() returns true.
+    final canSchedule = await android?.canScheduleExactNotifications() ?? true;
+    if (canSchedule) {
+      _exactAlarmsGranted = true;
+    } else {
+      _exactAlarmsGranted =
+          await android?.requestExactAlarmsPermission() ?? false;
+    }
+  }
+
+  /// Allows the app to re-check exact-alarm permission after the user comes
+  /// back from system settings (e.g. through the
+  /// `query-notification-permission` bridge message).
+  static Future<bool> refreshExactAlarmsPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    _exactAlarmsGranted =
+        await android?.canScheduleExactNotifications() ?? true;
+    return _exactAlarmsGranted!;
   }
 
   static Future<void> scheduleAlarms(List<Map<String, dynamic>> slots) async {
@@ -104,7 +137,9 @@ class NotificationService {
             enableVibration: _medRemindersChannel.enableVibration,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: (_exactAlarmsGranted ?? true)
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,

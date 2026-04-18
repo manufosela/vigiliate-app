@@ -22,7 +22,10 @@ On `onPageFinished` the WebView injects:
 
 ```js
 window.__vigiliate_native = true;
-window.__vigiliate_native_state = { notificationsGranted: true | false | null };
+window.__vigiliate_native_state = {
+  notificationsGranted: true | false | null,
+  exactAlarmsGranted:   true | false | null,
+};
 // null means "not asked yet" (pre-Android 13 or init not run)
 window.dispatchEvent(new CustomEvent('vigiliate-bridge-ready', {
   detail: window.__vigiliate_native_state
@@ -37,7 +40,7 @@ The PWA sends messages via `window.VigiliateBridge.postMessage(JSON.stringify(pa
 | `google-sign-out` | — | Signs out of Google |
 | `schedule-alarms` | `{slots: [{time: "HH:mm", meds: "..."}]}` | Cancels existing alarms and schedules new ones (exact, daily, surviving reboot) |
 | `cancel-alarms` | — | Cancels all scheduled reminders |
-| `query-notification-permission` | — | Re-reads the runtime permission. Replies via `window.__vigiliate_onPermissionStatus({notifications: true \| false \| null})`. Useful after sending the user to System Settings. |
+| `query-notification-permission` | — | Re-reads the runtime permissions (notifications + exact alarms). Replies via `window.__vigiliate_onPermissionStatus({notifications, exactAlarms})` where each field is `true \| false \| null`. Useful after sending the user to System Settings. |
 
 ## Project layout
 
@@ -134,7 +137,7 @@ Declared permissions (`android/app/src/main/AndroidManifest.xml`):
 - `RECEIVE_BOOT_COMPLETED` — reschedule alarms after reboot
 - `VIBRATE`, `WAKE_LOCK` — alarm delivery
 
-`SCHEDULE_EXACT_ALARM` in Android 14+ requires a runtime opt-in via `AlarmManager.canScheduleExactAlarms()` / `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`; see `VGI-TSK-0039`.
+`SCHEDULE_EXACT_ALARM` in Android 14+ requires a runtime opt-in. The app requests it automatically on startup via `flutter_local_notifications`' `requestExactAlarmsPermission()` and, if denied, falls back to `AndroidScheduleMode.inexactAllowWhileIdle` (reminders may drift by a few minutes). The PWA is notified of the state through `exactAlarmsGranted` in `window.__vigiliate_native_state`.
 
 ## Planning Game tracking
 
