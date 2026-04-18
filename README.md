@@ -84,6 +84,19 @@ flutter test
 flutter analyze
 ```
 
+## iOS setup (on a Mac)
+
+The Flutter + Linux side of iOS is configured (AppDelegate hooks Darwin notifications, Info.plist declares the Google Sign-In URL scheme placeholder, `flutter_launcher_icons` generates the icon for both platforms). Finishing the iOS target requires a Mac with Xcode and the following one-time steps:
+
+1. Register the iOS app in the [Firebase console](https://console.firebase.google.com/) with the same bundle id as `ios/Runner.xcodeproj` (`com.vigiliate.vigiliate_app`).
+2. Download `GoogleService-Info.plist` and drop it into `ios/Runner/` (it's in `.gitignore`, keep it out of the repo).
+3. Open `ios/Runner/Info.plist` and replace the literal `REVERSED_CLIENT_ID` URL scheme with the value of the same key from `GoogleService-Info.plist`.
+4. `cd ios && pod install --repo-update && cd ..`
+5. `flutter build ios --release` (Xcode 15+, targeting iOS 13+).
+6. Verify manually: Google Sign-In returns to the app, notifications fire in foreground (banner + sound) and background.
+
+Firebase Crashlytics for iOS requires adding a *Run Script* build phase in Xcode — the `firebase_crashlytics` docs have step-by-step instructions. After that, no Dart changes are needed — the same hooks in `lib/main.dart` cover both platforms.
+
 ## Secrets and per-environment files
 
 These files **are not in the repo** (see `.gitignore`) and must be placed locally after cloning:
