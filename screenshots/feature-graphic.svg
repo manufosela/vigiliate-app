@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">
+  <rect width="1024" height="500" fill="#1a1614"/>
+  <text x="512" y="220" text-anchor="middle" font-family="Georgia, serif" font-size="120" font-weight="700" font-style="italic" fill="#d4944a">Vigiliate</text>
+  <text x="512" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#a89882">Diario médico personal</text>
+  <text x="512" y="360" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#6b6460">Observa tu día con calma. Incluso en los días difíciles.</text>
+  <line x1="412" y1="310" x2="612" y2="310" stroke="#d4944a" stroke-width="1" opacity="0.3"/>
+</svg>
