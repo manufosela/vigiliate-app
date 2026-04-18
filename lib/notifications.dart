@@ -51,7 +51,20 @@ class NotificationService {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const initSettings = InitializationSettings(android: androidSettings);
+    // iOS / macOS: ask for alert + badge + sound at init. Pre-Darwin
+    // init returns true when the plugin is not running on Apple, so this
+    // is safe on Android too (it's just ignored).
+    const darwinSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
+
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: darwinSettings,
+      macOS: darwinSettings,
+    );
 
     await _plugin.initialize(initSettings);
 
