@@ -7,6 +7,10 @@ import 'google_auth.dart';
 import 'notifications.dart';
 
 const _appUrl = 'https://vigiliate.web.app';
+const _backgroundColor = Color(0xFF171417);
+const _brandSeed = Color(0xFFD4944A);
+
+enum _WebLoadState { loading, ready, error }
 
 class VigilateApp extends StatelessWidget {
   const VigilateApp({super.key});
@@ -18,7 +22,7 @@ class VigilateApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFD4944A),
+          seedColor: _brandSeed,
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -37,13 +41,15 @@ class WebViewScreen extends StatefulWidget {
 
 class _WebViewScreenState extends State<WebViewScreen> {
   late final WebViewController _controller;
+  _WebLoadState _loadState = _WebLoadState.loading;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(const Color(0xFF171417))
+      ..setBackgroundColor(_backgroundColor)
       ..addJavaScriptChannel(
         'VigiliateBridge',
         onMessageReceived: (JavaScriptMessage message) {
@@ -52,10 +58,66 @@ class _WebViewScreenState extends State<WebViewScreen> {
       )
       ..setNavigationDelegate(
         NavigationDelegate(
-          onPageFinished: (_) => _injectBridge(),
+          onPageStarted: (_) => _setState(_WebLoadState.loading),
+          onPageFinished: (_) async {
+            await _injectBridge();
+            _setState(_WebLoadState.ready);
+          },
+          onWebResourceError: (error) {
+            // Ignore errors for sub-resources (images, analytics…) — only the
+            // main-frame failure means we cannot show the app at all.
+            if (error.isForMainFrame != false) {
+              _setState(
+                _WebLoadState.error,
+                message: _describeError(error),
+              );
+            }
+          },
+          onHttpError: (error) {
+            final code = error.response?.statusCode;
+            if (code != null && code >= 500) {
+              _setState(
+                _WebLoadState.error,
+                message: 'Error del servidor ($code). Inténtalo de nuevo.',
+              );
+            }
+          },
         ),
       )
       ..loadRequest(Uri.parse(_appUrl));
+  }
+
+  void _setState(_WebLoadState state, {String? message}) {
+    if (!mounted) return;
+    setState(() {
+      _loadState = state;
+      _errorMessage = message;
+    });
+  }
+
+  Future<void> _retry() async {
+    _setState(_WebLoadState.loading);
+    await _controller.loadRequest(Uri.parse(_appUrl));
+  }
+
+  String _describeError(WebResourceError error) {
+    switch (error.errorType) {
+      case WebResourceErrorType.hostLookup:
+      case WebResourceErrorType.connect:
+      case WebResourceErrorType.timeout:
+      case WebResourceErrorType.io:
+        return 'No hay conexión con vigiliate.web.app. '
+            'Revisa tu red e inténtalo de nuevo.';
+      case WebResourceErrorType.unknown:
+      case null:
+        return error.description.isEmpty
+            ? 'No se pudo cargar la aplicación.'
+            : error.description;
+      default:
+        return error.description.isEmpty
+            ? 'No se pudo cargar la aplicación.'
+            : error.description;
+    }
   }
 
   Future<void> _handleBridgeMessage(String message) async {
@@ -114,9 +176,82 @@ class _WebViewScreenState extends State<WebViewScreen> {
         await SystemNavigator.pop();
       },
       child: Scaffold(
-        backgroundColor: const Color(0xFF171417),
+        backgroundColor: _backgroundColor,
         body: SafeArea(
-          child: WebViewWidget(controller: _controller),
+          child: Stack(
+            children: [
+              Offstage(
+                offstage: _loadState == _WebLoadState.error,
+                child: WebViewWidget(controller: _controller),
+              ),
+              if (_loadState == _WebLoadState.loading)
+                const _LoadingOverlay(),
+              if (_loadState == _WebLoadState.error)
+                _ErrorOverlay(message: _errorMessage, onRetry: _retry),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadingOverlay extends StatelessWidget {
+  const _LoadingOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: _backgroundColor,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Cargando Vigiliate…'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorOverlay extends StatelessWidget {
+  const _ErrorOverlay({required this.message, required this.onRetry});
+
+  final String? message;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: _backgroundColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.cloud_off_rounded,
+                size: 56,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message ?? 'No se pudo cargar Vigiliate.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Reintentar'),
+              ),
+            ],
+          ),
         ),
       ),
     );
