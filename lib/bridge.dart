@@ -48,4 +48,10 @@ abstract class BridgeMessageType {
   static const String googleSignOut = 'google-sign-out';
   static const String scheduleAlarms = 'schedule-alarms';
   static const String cancelAlarms = 'cancel-alarms';
+
+  /// Sent by the PWA to re-read the notification permission state after the
+  /// user has come back from Settings. The native side replies via
+  /// `window.__vigiliate_onPermissionStatus(payload)`.
+  static const String queryNotificationPermission =
+      'query-notification-permission';
 }

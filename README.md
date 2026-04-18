@@ -18,7 +18,18 @@ The PWA itself lives in its own repo — this project only ships the shell.
 
 ## JavaScript bridge
 
-The WebView injects `window.__vigiliate_native = true` on `onPageFinished` and a `vigiliate-bridge-ready` event. The PWA sends messages via `window.VigiliateBridge.postMessage(JSON.stringify(payload))` with these `type`s:
+On `onPageFinished` the WebView injects:
+
+```js
+window.__vigiliate_native = true;
+window.__vigiliate_native_state = { notificationsGranted: true | false | null };
+// null means "not asked yet" (pre-Android 13 or init not run)
+window.dispatchEvent(new CustomEvent('vigiliate-bridge-ready', {
+  detail: window.__vigiliate_native_state
+}));
+```
+
+The PWA sends messages via `window.VigiliateBridge.postMessage(JSON.stringify(payload))` with these `type`s:
 
 | Type | Payload | Native behavior |
 |---|---|---|
@@ -26,6 +37,7 @@ The WebView injects `window.__vigiliate_native = true` on `onPageFinished` and a
 | `google-sign-out` | — | Signs out of Google |
 | `schedule-alarms` | `{slots: [{time: "HH:mm", meds: "..."}]}` | Cancels existing alarms and schedules new ones (exact, daily, surviving reboot) |
 | `cancel-alarms` | — | Cancels all scheduled reminders |
+| `query-notification-permission` | — | Re-reads the runtime permission. Replies via `window.__vigiliate_onPermissionStatus({notifications: true \| false \| null})`. Useful after sending the user to System Settings. |
 
 ## Project layout
 

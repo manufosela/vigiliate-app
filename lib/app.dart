@@ -70,15 +70,31 @@ class _WebViewScreenState extends State<WebViewScreen> {
             .runJavaScript('window.__vigiliate_onNativeAuth($payload);');
       case BridgeMessageType.googleSignOut:
         await GoogleAuthService.signOut();
+      case BridgeMessageType.queryNotificationPermission:
+        await _emitPermissionStatus();
       default:
         await NotificationService.handleBridgeMessage(msg);
     }
   }
 
-  void _injectBridge() {
-    _controller.runJavaScript('''
+  Future<void> _emitPermissionStatus() async {
+    final payload = jsonEncode({
+      'notifications': NotificationService.notificationsGranted,
+    });
+    await _controller
+        .runJavaScript('window.__vigiliate_onPermissionStatus($payload);');
+  }
+
+  Future<void> _injectBridge() async {
+    final initialState = jsonEncode({
+      'notificationsGranted': NotificationService.notificationsGranted,
+    });
+    await _controller.runJavaScript('''
       window.__vigiliate_native = true;
-      window.dispatchEvent(new CustomEvent('vigiliate-bridge-ready'));
+      window.__vigiliate_native_state = $initialState;
+      window.dispatchEvent(new CustomEvent('vigiliate-bridge-ready', {
+        detail: window.__vigiliate_native_state
+      }));
     ''');
   }
 
