@@ -140,8 +140,12 @@ class _WebViewScreenState extends State<WebViewScreen> {
   }
 
   Future<void> _emitPermissionStatus() async {
+    // Re-check exact alarms: the user may have toggled them in Settings
+    // after we last asked, and unlike notifications there is no callback.
+    await NotificationService.refreshExactAlarmsPermission();
     final payload = jsonEncode({
       'notifications': NotificationService.notificationsGranted,
+      'exactAlarms': NotificationService.exactAlarmsGranted,
     });
     await _controller
         .runJavaScript('window.__vigiliate_onPermissionStatus($payload);');
@@ -150,6 +154,7 @@ class _WebViewScreenState extends State<WebViewScreen> {
   Future<void> _injectBridge() async {
     final initialState = jsonEncode({
       'notificationsGranted': NotificationService.notificationsGranted,
+      'exactAlarmsGranted': NotificationService.exactAlarmsGranted,
     });
     await _controller.runJavaScript('''
       window.__vigiliate_native = true;
