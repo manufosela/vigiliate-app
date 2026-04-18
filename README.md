@@ -125,7 +125,18 @@ flutter build apk --debug
 # or simply: flutter run
 ```
 
-Version is declared in `pubspec.yaml` as `version: <versionName>+<versionCode>`. Bump it before each release and keep it aligned with what Google Play has already published (see Play Console → Internal release history).
+### Versioning policy
+
+Version is declared in `pubspec.yaml` as `version: <versionName>+<versionCode>`. Rules:
+
+- **`versionCode`** (the number after `+`) is **monotonically increasing**; Play Console rejects any bundle with a `versionCode` equal or lower than one previously uploaded to that track.
+- **`versionName`** follows [semver](https://semver.org): `MAJOR.MINOR.PATCH`.
+  - `PATCH` → bug fix / small UX polish / infra task (wrapper hardening, lints, proguard)
+  - `MINOR` → new capability exposed to the PWA (new bridge type, new permission)
+  - `MAJOR` → breaking change for users or PWA contract
+- Always bump `versionCode` when you bump `versionName` — even for the smallest patch. Confirm against Play Console → Internal release history before bumping.
+
+Current: `1.0.1+2` (first post-launch release; adds runtime permission handling, WebView UX, hardened lints and tests).
 
 ## Android manifest notes
 
