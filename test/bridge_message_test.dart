@@ -32,6 +32,13 @@ void main() {
       expect(msg?.type, BridgeMessageType.cancelAlarms);
     });
 
+    test('parses query-notification-permission', () {
+      final msg = BridgeMessage.tryParse(
+        '{"type":"query-notification-permission"}',
+      );
+      expect(msg?.type, BridgeMessageType.queryNotificationPermission);
+    });
+
     test('returns null for invalid JSON', () {
       expect(BridgeMessage.tryParse('not json'), isNull);
       expect(BridgeMessage.tryParse(''), isNull);
