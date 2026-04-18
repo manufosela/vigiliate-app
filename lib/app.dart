@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'bridge.dart';
 import 'google_auth.dart';
 import 'notifications.dart';
 
@@ -56,29 +57,21 @@ class _WebViewScreenState extends State<WebViewScreen> {
       ..loadRequest(Uri.parse(_appUrl));
   }
 
-  void _handleBridgeMessage(String message) async {
-    try {
-      final data = jsonDecode(message) as Map<String, dynamic>;
-      final type = data['type'] as String?;
+  Future<void> _handleBridgeMessage(String message) async {
+    final msg = BridgeMessage.tryParse(message);
+    if (msg == null) return;
 
-      if (type == 'google-sign-in') {
+    switch (msg.type) {
+      case BridgeMessageType.googleSignIn:
         final tokens = await GoogleAuthService.signIn();
-        if (tokens != null) {
-          final tokensJson = jsonEncode(tokens);
-          _controller.runJavaScript(
-            'window.__vigiliate_onNativeAuth($tokensJson);',
-          );
-        } else {
-          _controller.runJavaScript(
-            'window.__vigiliate_onNativeAuth(null);',
-          );
-        }
-      } else if (type == 'google-sign-out') {
+        final payload = tokens == null ? 'null' : jsonEncode(tokens);
+        await _controller
+            .runJavaScript('window.__vigiliate_onNativeAuth($payload);');
+      case BridgeMessageType.googleSignOut:
         await GoogleAuthService.signOut();
-      } else {
-        NotificationService.handleMessage(message);
-      }
-    } catch (_) {}
+      default:
+        await NotificationService.handleBridgeMessage(msg);
+    }
   }
 
   void _injectBridge() {

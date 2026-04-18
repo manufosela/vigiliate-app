@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:vigiliate_app/main.dart';
+import 'package:vigiliate_app/app.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  // Smoke test: VigilateApp itself is a stateless, trivial wrapper around a
+  // WebViewScreen. Constructing and inspecting its MaterialApp without a full
+  // pumpWidget avoids hitting the platform channels that would fail in a
+  // host-only test environment.
+  test('VigilateApp is a stateless widget and ships a dark MaterialApp', () {
+    const app = VigilateApp();
+    expect(app, isA<StatelessWidget>());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    final material = app.build(_NoContext()) as MaterialApp;
+    expect(material.title, 'Vigiliate');
+    expect(material.debugShowCheckedModeBanner, isFalse);
+    expect(material.theme?.brightness, Brightness.dark);
+    expect(material.home, isA<WebViewScreen>());
   });
+}
+
+/// A minimal BuildContext replacement for pure constructor-level assertions.
+/// `VigilateApp.build` does not touch the context beyond passing it through to
+/// `MaterialApp`, so a sentinel is enough.
+class _NoContext implements BuildContext {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
 }
